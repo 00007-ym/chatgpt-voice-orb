@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT 简约语音球
 // @namespace    local.chatgpt.voice-helper
-// @version      2.5.10
+// @version      2.5.11
 // @description  简约语音球：缩小、右下角、空闲透明、拖动记忆、快捷键隐藏。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -17,7 +17,7 @@
   'use strict';
 
   const SCALE = 0.7;
-  const VERSION = '2.5.10';
+  const VERSION = '2.5.11';
   const IDLE_OPACITY = 0.25;
   const MARGIN = 24;
   const SELECTOR = '[data-testid="avatar-overlay-voice-orb"]';
@@ -31,6 +31,9 @@
 
   let nx = fraction(read('voice-v2-x', 1));
   let ny = fraction(read('voice-v2-y', 1));
+  let fullOpacity=read('voice-v2-full-opacity',false)===true;
+  let hintSeen=read('voice-v2-gesture-hint-seen',false)===true, hintActive=false;
+  let movedDuringDrag=false,lastDragAt=-Infinity;
   let dockTimer=0;
   let hidden = false, hovered = false, dragging = false;
   let target = null, original = new Map();
@@ -40,7 +43,7 @@
   css.textContent = `[${MARK}], [${MARK}] * { pointer-events: none !important; }`;
   document.head.appendChild(css);
   const grip = document.createElement('div');
-  grip.title = '按住球体拖动；位置自动保存';
+  grip.title = '拖动移动 · 双击切换清晰度 / Drag to move · Double-click to toggle opacity';
   grip.style.cssText = 'position:fixed;z-index:2147483601;display:none;border-radius:50%;clip-path:ellipse(50% 50% at 50% 50%);background:transparent;user-select:none;touch-action:none;cursor:grab;';
   document.body.appendChild(grip);
   grip.setAttribute('data-local-voice-grip', '');
@@ -59,14 +62,13 @@
   function scheduleDock(delay=1100){clearTimeout(dockTimer);dockTimer=0;if(!nearEdge())return;dockTimer=setTimeout(()=>{dockTimer=0;if(!target||dragging||!nearEdge())return;if(hovered){scheduleDock();return;}dockOrb();},delay);}
   function dockOrb(){
     if(!target||dragging)return;clearTimeout(dockTimer);hidden=true;hovered=false;nx=nx<.5?0:1;save('voice-v2-x',nx);place();appearance();
-    statusDismissed=false;statusBadge.style.display='flex';setStatus(nx<.5?'已收纳到左侧细线，移到细线处展开。 / Hidden at the left edge. Hover over the line to reveal.':'已收纳到右侧细线，移到细线处展开。 / Hidden at the right edge. Hover over the line to reveal.');clearTimeout(statusTimer);statusTimer=setTimeout(()=>{statusBadge.style.display='none'},6500);
   }
   edge.addEventListener('pointerenter',revealDock);edge.addEventListener('click',revealDock);edge.addEventListener('focus',revealDock);
 
 
   const statusBadge = document.createElement('div');
   statusBadge.setAttribute('data-local-voice-status', VERSION);
-  statusBadge.style.cssText = 'position:fixed;right:12px;top:60px;z-index:2147483647;display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #666;border-radius:9px;background:#252525;color:#eee;font:12px/1.5 system-ui;box-shadow:0 2px 10px #0002;';
+  statusBadge.style.cssText = 'position:fixed;right:12px;top:60px;z-index:2147483647;display:none;align-items:center;gap:8px;max-width:min(380px,calc(100vw - 48px));padding:7px 10px;border:1px solid #666;border-radius:9px;background:#252525;color:#eee;font:12px/1.5 system-ui;box-shadow:0 2px 10px #0002;';
   const statusText = document.createElement('span');
   statusText.setAttribute('role','status');
   const statusClose = document.createElement('button');
@@ -76,14 +78,22 @@
   let statusDismissed=false,statusTimer=0,statusValue='',statusMenu;
   const temporaryRuntime=typeof GM_info==='undefined';
   function setStatus(message) {
+    if(hintActive)return;
     const value=`语音球 ${VERSION}${temporaryRuntime?'（本页临时）':''} · ${message}`;
     if(value===statusValue)return;
     statusValue=value;statusText.textContent=value;
     statusBadge.title='加载后等待语音球出现；如果开启语音后仍在等待，请确认网页中有悬浮语音球。刷新会重新检测。';
   }
-  statusClose.addEventListener('click',()=>{statusDismissed=true;statusBadge.style.display='none';clearTimeout(statusTimer)});
-  try { statusMenu=GM_registerMenuCommand(`语音球 ${VERSION}：显示状态 / 重新检测`,()=>{statusDismissed=false;statusBadge.style.display='flex';clearTimeout(statusTimer);scan();}); } catch {}
+  statusClose.addEventListener('click',()=>{hintActive=false;statusDismissed=true;statusBadge.style.display='none';clearTimeout(statusTimer)});
+  try { statusMenu=GM_registerMenuCommand(`语音球 ${VERSION}：显示状态 / 重新检测`,()=>{hintActive=false;statusDismissed=false;statusBadge.style.display='flex';clearTimeout(statusTimer);scan();}); } catch {}
   setStatus('已加载，等待语音球');
+  function showHintOnce(){
+    if(hintSeen)return;
+    hintSeen=true;save('voice-v2-gesture-hint-seen',true);hintActive=true;
+    statusText.textContent='双击小球切换完全清晰／空闲半透明；拖到左右边缘可收纳，悬停边缘细线展开。\nDouble-click the orb to toggle full opacity / idle fading. Drag to either edge to tuck away; hover over the edge line to reveal.';
+    statusText.style.whiteSpace='pre-line';statusBadge.style.display='flex';
+    clearTimeout(statusTimer);statusTimer=setTimeout(()=>{hintActive=false;statusBadge.style.display='none'},10000);
+  }
 
   function own(name, value) {
     if (!target) return;
@@ -103,7 +113,7 @@
   }
   function appearance() {
     if (!target) return;
-    own('opacity', String(hidden ? 0 : hovered || dragging ? 1 : IDLE_OPACITY));
+    own('opacity', String(hidden ? 0 : fullOpacity || hovered || dragging ? 1 : IDLE_OPACITY));
     syncGrip();syncEdge();
 
   }
@@ -170,27 +180,29 @@
     if (elements.length !== 1) { setStatus(elements.length ? '发现多个候选，暂不移动' : '已加载，等待语音球'); return; }
     const element = elements[0], r = element.getBoundingClientRect();
     if (r.width && r.height) bind(element);
-    if(target){setStatus('已连接语音球');if(!statusDismissed){clearTimeout(statusTimer);statusTimer=setTimeout(()=>{statusBadge.style.display='none'},6000)}}
+    if(target){setStatus('已连接语音球');showHintOnce();}
     else setStatus('已加载，等待可识别的语音球');
   }
   function toggleHidden() { if(dragging)return;scan();if(hidden)revealDock();else dockOrb(); }
   let startX, startY, startNX, startNY;
   function beginDrag(e) {
     if (e.button !== 0 || !e.isPrimary || !target || hidden || dragging) return;
-    e.preventDefault();e.stopPropagation();grip.style.cursor='grabbing'; dragging = true; startX = e.clientX; startY = e.clientY; startNX = nx; startNY = ny;
+    e.preventDefault();e.stopPropagation();movedDuringDrag=false;grip.style.cursor='grabbing'; dragging = true; startX = e.clientX; startY = e.clientY; startNX = nx; startNY = ny;
     clearTimeout(dockTimer);dockTimer=0;
     grip.setPointerCapture(e.pointerId); appearance();
   }
   grip.addEventListener('pointerdown', beginDrag);
   function moveDrag(e) {
     if (!dragging || !target) return;
+    if(Math.hypot(e.clientX-startX,e.clientY-startY)>4)movedDuringDrag=true;
     const r = target.getBoundingClientRect();
     const rangeX = Math.max(1, innerWidth - r.width - 2 * MARGIN), rangeY = Math.max(1, innerHeight - r.height - 2 * MARGIN);
     nx = clamp(startNX + (e.clientX - startX) / rangeX, 0, 1); ny = clamp(startNY + (e.clientY - startY) / rangeY, 0, 1); place();
   }
   grip.addEventListener('pointermove', moveDrag);
   grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
-  function endDrag() { if (!dragging) return; dragging = false;grip.style.cursor='grab';hovered=false; save('voice-v2-x', nx); save('voice-v2-y', ny); appearance();scheduleDock(); }
+  grip.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();if(hidden||dragging||performance.now()-lastDragAt<500)return;fullOpacity=!fullOpacity;save('voice-v2-full-opacity',fullOpacity);appearance();});
+  function endDrag() { if (!dragging) return; dragging = false;if(movedDuringDrag)lastDragAt=performance.now();grip.style.cursor='grab';hovered=false; save('voice-v2-x', nx); save('voice-v2-y', ny); appearance();scheduleDock(); }
   grip.addEventListener('pointerup', endDrag); grip.addEventListener('pointercancel', endDrag); grip.addEventListener('lostpointercapture', endDrag);
   function onPointerMove(e) {
     lastPointer={x:e.clientX,y:e.clientY};if(pointerFrame)return;
