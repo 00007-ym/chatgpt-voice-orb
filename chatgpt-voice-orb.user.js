@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT 简约语音球
 // @namespace    local.chatgpt.voice-helper
-// @version      2.5.9
+// @version      2.5.10
 // @description  简约语音球：缩小、右下角、空闲透明、拖动记忆、快捷键隐藏。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -17,7 +17,7 @@
   'use strict';
 
   const SCALE = 0.7;
-  const VERSION = '2.5.9';
+  const VERSION = '2.5.10';
   const IDLE_OPACITY = 0.25;
   const MARGIN = 24;
   const SELECTOR = '[data-testid="avatar-overlay-voice-orb"]';
@@ -55,7 +55,7 @@
     edge.setAttribute('aria-label',nx<.5?'语音球在左侧：悬停或点击展开 / Orb on left: hover or click to reveal':'语音球在右侧：悬停或点击展开 / Orb on right: hover or click to reveal');edge.title=edge.getAttribute('aria-label');
   }
   function revealDock(){if(!target||!hidden)return;clearTimeout(dockTimer);hidden=false;hovered=true;appearance();place();scheduleDock();}
-  function nearEdge(){if(!target?.isConnected)return false;const r=target.getBoundingClientRect();return r.width>0&&(r.left<=48||innerWidth-r.right<=48);}
+  function nearEdge(){return !!target?.isConnected&&(nx<=0.008||nx>=0.992);}
   function scheduleDock(delay=1100){clearTimeout(dockTimer);dockTimer=0;if(!nearEdge())return;dockTimer=setTimeout(()=>{dockTimer=0;if(!target||dragging||!nearEdge())return;if(hovered){scheduleDock();return;}dockOrb();},delay);}
   function dockOrb(){
     if(!target||dragging)return;clearTimeout(dockTimer);hidden=true;hovered=false;nx=nx<.5?0:1;save('voice-v2-x',nx);place();appearance();

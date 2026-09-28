@@ -4,11 +4,11 @@
 
 [**安装 / 下载完整脚本**](https://raw.githubusercontent.com/00007-ym/chatgpt-voice-orb/refs/heads/main/chatgpt-voice-orb.user.js) · [English](#english)
 
-## 2.5.9 更新
+## 2.5.10 更新
 
 - 直接按住球体拖动，移除独立拖动按钮，位置仍会自动记忆。
 - 移除圆环及独立工具栏，只保留球体直接拖动，没有 Emoji。
-- 仅当球体距左／右边缘不超过 48px 时自动收纳，保留细线；放在中间保持显示，刷新后也记忆位置。悬停或点击细线展开，鼠标离开约 1.1 秒后收回；中英文提示收纳位置。
+- 仅在可拖动范围最左／最右的 0.8% 内自动收纳，按保存位置判断，扩大中间常驻区域，保留细线；放在中间保持显示，刷新后也记忆位置。悬停或点击细线展开，鼠标离开约 1.1 秒后收回；中英文提示收纳位置。
 - 保留原球外观、70% 尺寸、25% 空闲透明度，以及两组隐藏快捷键。
 
 ## 前后对比
@@ -17,7 +17,7 @@
 | --- | --- |
 | ![修改前：原球覆盖正文](./preview-before.png) | ![使用后：小球收纳至边缘细线](./preview.png) |
 
-![2.5.9：直接拖动球体，边缘悬停展开，球体可拖动](./preview-hover.png)
+![2.5.10：直接拖动球体，边缘悬停展开，球体可拖动](./preview-hover.png)
 
 图片为界面还原示意，使用演示文字。球体画面、原始尺寸与位置取自真实网页；使用后运行本仓库脚本，不含私人对话。实际效果随窗口和网页版本变化。
 
@@ -55,7 +55,7 @@
 
 ## 验证与限制
 
-2.5.9 已通过脚本猫 1.4.0 的实际安装测试：在独立 Edge 配置与模拟 ChatGPT DOM 上验证了启动、缩放、贴边收纳与悬停展开、左右侧中英文引导、两组快捷键、球体拖动、刷新后位置记忆、窗口缩放、清理还原及无页面异常。此测试不等于当前真实语音页面的完整验证。旧版本曾在真实 Edge 语音页面测试；Chrome 尚未单独实测。
+2.5.10 已通过脚本猫 1.4.0 的实际安装测试：在独立 Edge 配置与模拟 ChatGPT DOM 上验证了启动、缩放、贴边收纳与悬停展开、左右侧中英文引导、两组快捷键、球体拖动、刷新后位置记忆、窗口缩放、清理还原及无页面异常。此测试不等于当前真实语音页面的完整验证。旧版本曾在真实 Edge 语音页面测试；Chrome 尚未单独实测。
 
 通过稳定属性 data-testid="avatar-overlay-voice-orb" 定位，多个候选时不移动。ChatGPT 页面结构变化后可能需要更新。仅用于网页悬浮语音球，不适用于原生手机或桌面 App。非官方项目，与 OpenAI 无关联。
 
@@ -63,7 +63,7 @@
 
 ChatGPT Minimal Voice Orb is a userscript that moves, shrinks, fades or hides the floating ChatGPT web voice orb when it covers text.
 
-**Version 2.5.9:** the orb only auto-docks when its boundary is within 48px of the left or right edge. Leave it in the middle to keep it visible, including after reload. A thin line marks its position. Hover over or click the line to reveal; move away to tuck it back after about 1.1 seconds when near an edge. Bilingual guidance tells you which edge to use. Drag the orb itself to move it. The separate ring and toolbar have been removed. No eye icon or emoji. Alt+Shift+V and Ctrl+Shift+H also toggle visibility. Scale is 70%; idle opacity is 25%. Dock side and height are saved locally.
+**Version 2.5.10:** the orb only auto-docks within the outermost 0.8% of its draggable range on either side, using its saved position instead of transient page geometry. Leave it in the middle to keep it visible, including after reload. A thin line marks its position. Hover over or click the line to reveal; move away to tuck it back after about 1.1 seconds when near an edge. Bilingual guidance tells you which edge to use. Drag the orb itself to move it. The separate ring and toolbar have been removed. No eye icon or emoji. Alt+Shift+V and Ctrl+Shift+H also toggle visibility. Scale is 70%; idle opacity is 25%. Dock side and height are saved locally.
 
 Install ScriptCat or Tampermonkey, open the installation link above, enable the script, reload ChatGPT and start voice mode. When replacing an existing script, replace the entire source rather than appending code or copying a GitHub diff. Disable the script and reload to restore the original interface.
 
