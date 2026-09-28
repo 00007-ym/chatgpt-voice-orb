@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT 简约语音球
 // @namespace    local.chatgpt.voice-helper
-// @version      2.5.2
+// @version      2.5.3
 // @description  简约语音球：缩小、右下角、空闲透明、拖动记忆、快捷键隐藏。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -17,7 +17,7 @@
   'use strict';
 
   const SCALE = 0.7;
-  const VERSION = '2.5.2';
+  const VERSION = '2.5.3';
   const IDLE_OPACITY = 0.25;
   const MARGIN = 24;
   const SELECTOR = '[data-testid="avatar-overlay-voice-orb"]';
