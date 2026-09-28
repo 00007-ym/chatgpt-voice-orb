@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT 简约语音球
 // @namespace    local.chatgpt.voice-helper
-// @version      2.5.7
+// @version      2.5.8
 // @description  简约语音球：缩小、右下角、空闲透明、拖动记忆、快捷键隐藏。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -17,7 +17,7 @@
   'use strict';
 
   const SCALE = 0.7;
-  const VERSION = '2.5.7';
+  const VERSION = '2.5.8';
   const IDLE_OPACITY = 0.25;
   const MARGIN = 24;
   const SELECTOR = '[data-testid="avatar-overlay-voice-orb"]';
@@ -35,41 +35,16 @@
   let hidden = false, hovered = false, dragging = false;
   let target = null, original = new Map();
   let tx = 0, ty = 0, factorX = 1, factorY = 1, frame = 0;
-  let toolbarTimer = 0, toolbarHover = false, pointerFrame = 0, lastPointer = null;
-  function showToolbar() { clearTimeout(toolbarTimer); panel.style.opacity='1';panel.style.pointerEvents='auto'; }
-  function hideToolbarLater() {
-    clearTimeout(toolbarTimer);
-    toolbarTimer=setTimeout(()=>{if(!dragging&&!hidden&&!toolbarHover&&!panel.querySelector(':focus-visible')){panel.style.opacity='0';panel.style.pointerEvents='none';}},1500);
-  }
+  let pointerFrame = 0, lastPointer = null;
   const css = document.createElement('style');
   css.textContent = `[${MARK}], [${MARK}] * { pointer-events: none !important; }`;
   document.head.appendChild(css);
-  const panel = document.createElement('div');
-  panel.setAttribute('data-local-voice-panel', '');
-  panel.dataset.localVoiceVersion = VERSION;
-  panel.style.cssText = 'position:fixed;z-index:2147483647;display:none;gap:5px;align-items:center;font:12px sans-serif;transition:opacity .18s ease;';
-  panel.addEventListener('focusin',showToolbar);
-  panel.addEventListener('focusout',()=>{toolbarHover=false;hideToolbarLater()});
-  function button(text, title) {
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.title = title;
-    b.style.cssText = 'appearance:none;border:1px solid #8886;border-radius:7px;background:#252525;color:white;padding:5px 8px;font:12px sans-serif;cursor:pointer;line-height:18px;';
-    panel.appendChild(b); return b;
-  }
   const grip = document.createElement('div');
   grip.title = '按住球体拖动；位置自动保存';
   grip.style.cssText = 'position:fixed;z-index:2147483601;display:none;border-radius:50%;clip-path:ellipse(50% 50% at 50% 50%);background:transparent;user-select:none;touch-action:none;cursor:grab;';
   document.body.appendChild(grip);
   grip.setAttribute('data-local-voice-grip', '');
   grip.style.cursor = 'grab'; grip.style.touchAction = 'none';
-  const toggle = button('', '隐藏语音球 · Alt+Shift+V / Ctrl+Shift+H');
-  toggle.setAttribute('data-local-voice-toggle', '');
-  toggle.style.cssText = 'appearance:none;display:grid;place-items:center;width:30px;height:30px;padding:0;border:1px solid #ffffff24;border-radius:50%;background:#252525e8;color:#eee;cursor:pointer;';
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const eye = document.createElementNS(svgNS, 'svg');
-  eye.setAttribute('viewBox','0 0 24 24');eye.setAttribute('width','17');eye.setAttribute('height','17');eye.setAttribute('fill','none');eye.setAttribute('stroke','currentColor');eye.setAttribute('stroke-width','1.6');eye.setAttribute('stroke-linecap','round');eye.setAttribute('stroke-linejoin','round');eye.setAttribute('aria-hidden','true');
-  for(const d of ['M19 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0']){const p=document.createElementNS(svgNS,'path');p.setAttribute('d',d);eye.appendChild(p);}
-  const slash=document.createElementNS(svgNS,'path');slash.setAttribute('d','M9 12h6');eye.appendChild(slash);toggle.appendChild(eye);
-  document.body.appendChild(panel);
   const edge=document.createElement('button');
   edge.type='button';edge.setAttribute('data-local-voice-edge','');
   edge.style.cssText='position:fixed;z-index:2147483647;display:none;width:12px;height:88px;padding:0;border:0;background:transparent;cursor:pointer;touch-action:none;';
@@ -79,10 +54,10 @@
     const r=target.getBoundingClientRect();edge.style.display='block';edge.style.left=nx<.5?'0px':'auto';edge.style.right=nx<.5?'auto':'0px';edge.style.top=clamp(r.top+r.height/2-44,0,Math.max(0,innerHeight-88))+'px';
     edge.setAttribute('aria-label',nx<.5?'语音球在左侧：悬停或点击展开 / Orb on left: hover or click to reveal':'语音球在右侧：悬停或点击展开 / Orb on right: hover or click to reveal');edge.title=edge.getAttribute('aria-label');
   }
-  function revealDock(){if(!target||!hidden)return;clearTimeout(dockTimer);hidden=false;hovered=true;appearance();place();showToolbar();scheduleDock();}
-  function scheduleDock(delay=1100){clearTimeout(dockTimer);dockTimer=setTimeout(()=>{dockTimer=0;if(!target||dragging||panel.querySelector(':focus-visible'))return;if(hovered||toolbarHover){scheduleDock();return;}dockOrb();},delay);}
+  function revealDock(){if(!target||!hidden)return;clearTimeout(dockTimer);hidden=false;hovered=true;appearance();place();scheduleDock();}
+  function scheduleDock(delay=1100){clearTimeout(dockTimer);dockTimer=setTimeout(()=>{dockTimer=0;if(!target||dragging)return;if(hovered){scheduleDock();return;}dockOrb();},delay);}
   function dockOrb(){
-    if(!target||dragging)return;clearTimeout(dockTimer);docked=true;hidden=true;hovered=false;toolbarHover=false;nx=nx<.5?0:1;save('voice-v2-x',nx);place();appearance();
+    if(!target||dragging)return;clearTimeout(dockTimer);docked=true;hidden=true;hovered=false;nx=nx<.5?0:1;save('voice-v2-x',nx);place();appearance();
     statusDismissed=false;statusBadge.style.display='flex';setStatus(nx<.5?'已收纳到左侧细线，移到细线处展开。 / Hidden at the left edge. Hover over the line to reveal.':'已收纳到右侧细线，移到细线处展开。 / Hidden at the right edge. Hover over the line to reveal.');clearTimeout(statusTimer);statusTimer=setTimeout(()=>{statusBadge.style.display='none'},6500);
   }
   edge.addEventListener('pointerenter',revealDock);edge.addEventListener('click',revealDock);edge.addEventListener('focus',revealDock);
@@ -123,15 +98,12 @@
       target.removeAttribute(MARK);
     }
     clearTimeout(dockTimer);edge.style.display='none';dragging=false;grip.style.display='none';grip.style.cursor='grab';
-    target = null; original = new Map(); panel.style.display = 'none';
+    target = null; original = new Map(); 
   }
   function appearance() {
     if (!target) return;
     own('opacity', String(hidden ? 0 : hovered || dragging ? 1 : IDLE_OPACITY));
-    toggle.setAttribute('aria-label',hidden?'显示语音球':'隐藏语音球');
-    toggle.title=(hidden?'点击显示':'点击隐藏')+' · 拖动圆环移动位置 · Alt+Shift+V / Ctrl+Shift+H';
-    slash.style.display=hidden?'none':'';
-    syncGrip();syncEdge();panel.style.display=hidden?'none':'flex';
+    syncGrip();syncEdge();
 
   }
   function syncGrip() {
@@ -140,16 +112,11 @@
     grip.style.display=r.width&&r.height?'block':'none';
     grip.style.left=r.left+'px';grip.style.top=r.top+'px';grip.style.width=r.width+'px';grip.style.height=r.height+'px';
   }
-  function movePanel(rect) {
-    syncGrip();syncEdge();
-    const width = panel.offsetWidth || 110, height = panel.offsetHeight || 30;
-    panel.style.left = clamp(rect.right - width, 6, innerWidth - width - 6) + 'px';
-    panel.style.top = clamp(rect.top - height - 8, 6, innerHeight - height - 6) + 'px';
-  }
+  function syncControls() { syncGrip();syncEdge(); }
   function place() {
     if (!target?.isConnected) return;
     const rect = target.getBoundingClientRect();
-    if (!rect.width || !rect.height) { panel.style.display = 'none';grip.style.display='none'; return; }
+    if (!rect.width || !rect.height) { grip.style.display='none'; return; }
     const availableX = Math.max(0, innerWidth - rect.width - 2 * MARGIN);
     const availableY = Math.max(0, innerHeight - rect.height - 2 * MARGIN);
     const x = Math.min(MARGIN, Math.max(0, innerWidth - rect.width)) + nx * availableX;
@@ -160,7 +127,7 @@
       own('translate', `${tx}px ${ty}px`);
     }
     const finalRect = target.getBoundingClientRect();
-    panel.style.display = hidden?'none':'flex'; movePanel(finalRect);
+     syncControls();
 
   }
   function calibrate() {
@@ -179,7 +146,7 @@
     own('left', '0px'); own('top', '0px'); own('right', 'auto'); own('bottom', 'auto');
     own('scale', String(SCALE)); own('z-index', '2147483600');
     for (const side of ['top', 'right', 'bottom', 'left']) own('margin-' + side, '0px');
-    calibrate(); appearance(); place();showToolbar();hideToolbarLater();docked=true;scheduleDock(3000);
+    calibrate(); appearance(); place();docked=true;scheduleDock(3000);
   }
   function scan() {
     if(document.hidden)return;
@@ -191,8 +158,8 @@
         const expectedY=Math.min(MARGIN,Math.max(0,innerHeight-r.height))+ny*Math.max(0,innerHeight-r.height-2*MARGIN);
         if(Math.abs(r.left-expectedX)>1 || Math.abs(r.top-expectedY)>1){calibrate();place();r=target.getBoundingClientRect();}
       }
-      panel.style.display = visible&&!hidden ? 'flex' : 'none';if(!visible)edge.style.display='none';
-      if(visible)movePanel(r);else grip.style.display='none';
+      if(!visible)edge.style.display='none';
+      if(visible)syncControls();else grip.style.display='none';
 
       if(!hidden)setStatus(visible ? (hidden ? '已隐藏' : '已连接语音球') : '等待语音球显示');
       return;
@@ -206,38 +173,31 @@
     else setStatus('已加载，等待可识别的语音球');
   }
   function toggleHidden() { if(dragging)return;scan();if(hidden)revealDock();else dockOrb(); }
-  let controlMoved=false,dragSurface=null;
-  toggle.style.touchAction='none';toggle.style.cursor='grab';
-  toggle.addEventListener('click', e=>{e.preventDefault();e.stopPropagation();if(controlMoved){controlMoved=false;return;}toggleHidden();});
-  toggle.addEventListener('pointerdown',beginDrag);toggle.addEventListener('pointermove',moveDrag);
-  toggle.addEventListener('pointerup',endDrag);toggle.addEventListener('pointercancel',endDrag);toggle.addEventListener('lostpointercapture',endDrag);
   let startX, startY, startNX, startNY;
   function beginDrag(e) {
-    if (e.button !== 0 || !e.isPrimary || !target || (hidden && e.currentTarget!==toggle) || dragging) return;
-    e.preventDefault();e.stopPropagation();dragSurface=e.currentTarget;controlMoved=false;dragSurface.style.cursor='grabbing'; dragging = true; startX = e.clientX; startY = e.clientY; startNX = nx; startNY = ny;
-    clearTimeout(dockTimer);showToolbar();
-    dragSurface.setPointerCapture(e.pointerId); appearance();
+    if (e.button !== 0 || !e.isPrimary || !target || hidden || dragging) return;
+    e.preventDefault();e.stopPropagation();grip.style.cursor='grabbing'; dragging = true; startX = e.clientX; startY = e.clientY; startNX = nx; startNY = ny;
+    clearTimeout(dockTimer);
+    grip.setPointerCapture(e.pointerId); appearance();
   }
   grip.addEventListener('pointerdown', beginDrag);
   function moveDrag(e) {
     if (!dragging || !target) return;
-    if(dragSurface===toggle&&!controlMoved){if(Math.hypot(e.clientX-startX,e.clientY-startY)<4)return;controlMoved=true;}
     const r = target.getBoundingClientRect();
     const rangeX = Math.max(1, innerWidth - r.width - 2 * MARGIN), rangeY = Math.max(1, innerHeight - r.height - 2 * MARGIN);
     nx = clamp(startNX + (e.clientX - startX) / rangeX, 0, 1); ny = clamp(startNY + (e.clientY - startY) / rangeY, 0, 1); place();
   }
   grip.addEventListener('pointermove', moveDrag);
   grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
-  function endDrag() { if (!dragging) return; dragging = false;grip.style.cursor='grab';toggle.style.cursor='grab';dragSurface=null;hovered=false;toolbarHover=false; save('voice-v2-x', nx); save('voice-v2-y', ny); appearance();hideToolbarLater();if(docked)scheduleDock(); }
+  function endDrag() { if (!dragging) return; dragging = false;grip.style.cursor='grab';hovered=false; save('voice-v2-x', nx); save('voice-v2-y', ny); appearance();if(docked)scheduleDock(); }
   grip.addEventListener('pointerup', endDrag); grip.addEventListener('pointercancel', endDrag); grip.addEventListener('lostpointercapture', endDrag);
   function onPointerMove(e) {
     lastPointer={x:e.clientX,y:e.clientY};if(pointerFrame)return;
     pointerFrame=requestAnimationFrame(()=>{
       pointerFrame=0;if(!target||hidden||dragging||!lastPointer)return;
-      const {x,y}=lastPointer,r=target.getBoundingClientRect(),p=panel.getBoundingClientRect();
+      const {x,y}=lastPointer,r=target.getBoundingClientRect();
       const inside=(rect,pad)=>x>=rect.left-pad&&x<=rect.right+pad&&y>=rect.top-pad&&y<=rect.bottom+pad;
-      const next=inside(r,0),near=inside(r,24)||inside(p,8);
-      if(near){toolbarHover=true;showToolbar()}else if(toolbarHover){toolbarHover=false;hideToolbarLater()}
+      const next=inside(r,0),near=inside(r,24);
       if(next!==hovered){hovered=next;appearance()}
       if(near){clearTimeout(dockTimer);dockTimer=0;}else if(docked&&!dockTimer)scheduleDock();
     });
@@ -262,12 +222,12 @@
   scan();
   document.addEventListener(STOP_EVENT, () => {
     clearInterval(timer); cancelAnimationFrame(frame);
-    clearTimeout(toolbarTimer);cancelAnimationFrame(pointerFrame);
+    cancelAnimationFrame(pointerFrame);
     clearTimeout(statusTimer);statusBadge.remove();
     document.removeEventListener('visibilitychange',resumeScan);
     try { if(statusMenu!==undefined)GM_unregisterMenuCommand(statusMenu); } catch {}
     window.removeEventListener('keydown', onKey, true); window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('resize', onResize);
-    release();edge.remove();grip.remove(); panel.remove(); css.remove();
+    release();edge.remove();grip.remove();  css.remove();
 
   }, { once: true });
 })();
