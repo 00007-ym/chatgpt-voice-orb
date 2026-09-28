@@ -5,6 +5,8 @@
 
 [**安装 / 下载脚本**](https://raw.githubusercontent.com/00007-ym/chatgpt-voice-orb/refs/heads/main/chatgpt-voice-orb.user.js) · [English](#english) · [安装步骤](#安装) · [使用说明](#使用)
 
+[**图文教程：ChatGPT 网页端语音小球挡住文字怎么办？**](https://chatgpt-voice-orb-guide.wjn04182.chatgpt.site/)
+
 ## 前后对比
 
 同一段文字、同一视角：原球保持 112 px；脚本开启后缩小到约 78 px，移到右下角，空闲透明度降为 25%。
@@ -28,7 +30,7 @@
 
 ### What it does
 
-This userscript keeps the ChatGPT web voice orb out of the way when it overlaps the conversation. It changes only the existing floating orb, so its ink animation and overall look stay the same. It does not replace the voice session, record audio, or send messages.
+This userscript keeps the ChatGPT web voice orb out of the way when it overlaps the conversation. It preserves the existing orb's appearance and adds a small toolbar and a temporary status badge. It does not replace the voice session, record audio, or send messages.
 
 ### Installation
 
@@ -69,7 +71,7 @@ No. The script only changes the orb's opacity; it never touches the voice sessio
 Disable or remove this script in Tampermonkey, then refresh the ChatGPT page. The orb returns to its original size and position.
 
 **Does it upload my data?**
-No. It makes no network requests and does not read the chat text or audio. Position and state are stored only in Tampermonkey's local storage.
+No. The script makes no network requests and does not read chat text or audio. The orb position is stored only in Tampermonkey's local storage; hidden/visible state resets after refreshing.
 
 **It installed but nothing happens.**
 Confirm Tampermonkey is enabled and has site access for ChatGPT, then refresh the page and start voice mode. The script needs the floating orb to be present.
