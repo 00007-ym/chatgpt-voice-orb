@@ -1,9 +1,9 @@
-# ChatGPT 简约语音球
+# ChatGPT 简约语音球 · Minimal Voice Orb
 
-**让语音球不再挡住文字，只做必要的整理。**
-*A lightweight Tampermonkey script that tidies the ChatGPT voice orb.*
+**ChatGPT 网页语音球挡字？缩小、拖动、自动变淡或快捷键隐藏，边聊边看更方便。**
+*A lightweight Tampermonkey script that moves, shrinks, fades, or hides the ChatGPT voice orb so it stops covering your text.*
 
-[**安装 / 下载脚本**](https://raw.githubusercontent.com/00007-ym/chatgpt-voice-orb/refs/heads/main/chatgpt-voice-orb.user.js) · [安装步骤](#安装) · [使用说明](#使用)
+[**安装 / 下载脚本**](https://raw.githubusercontent.com/00007-ym/chatgpt-voice-orb/refs/heads/main/chatgpt-voice-orb.user.js) · [English](#english) · [安装步骤](#安装) · [使用说明](#使用)
 
 ## 前后对比
 
@@ -21,6 +21,71 @@
 </details>
 
 > 界面按实际网页的黑底白字还原，聊天内容为演示文字。球体画面和原始尺寸、位置取自关闭脚本后的真实网页，使用后运行本仓库脚本。以上为界面还原示意，不含私人对话；不同窗口尺寸和网页版本的效果可能不同。
+
+---
+
+## English
+
+### What it does
+
+This userscript keeps the ChatGPT web voice orb out of the way when it overlaps the conversation. It changes only the existing floating orb, so its ink animation and overall look stay the same. It does not replace the voice session, record audio, or send messages.
+
+### Installation
+
+[**One-click install**](https://raw.githubusercontent.com/00007-ym/chatgpt-voice-orb/refs/heads/main/chatgpt-voice-orb.user.js)
+
+1. Install [Tampermonkey](https://www.tampermonkey.net/) in your browser.
+2. Open the install link above. If no install page appears, open [`chatgpt-voice-orb.user.js`](./chatgpt-voice-orb.user.js) in this repository, copy the **full source** into a new Tampermonkey script, and save it.
+3. Make sure the script is enabled, refresh ChatGPT, then start voice mode.
+
+When updating, replace the old script instead of enabling two copies at once.
+
+### Features
+
+| Feature | Behavior |
+| --- | --- |
+| Size | Scales the orb to 70% of its original size |
+| Position | Moves it toward the bottom-right by default; remembers the position you drag it to |
+| Idle opacity | 25% while idle, full clarity on hover |
+| Drag | Hover near the orb, then drag the `⠿` grip |
+| Toolbar | Hides automatically about 1.5 seconds after the pointer leaves |
+| Hide / show | `Alt+Shift+V` or `Ctrl+Shift+H` |
+| After hiding | Click “显示球” (Chinese for “Show orb”), or press the shortcut again |
+
+Hiding sets the orb's opacity to 0. It does **not** end the call or turn off the microphone.
+
+### FAQ
+
+**The orb covers my text — how do I move it?**
+Hover near the orb until the small toolbar appears, then drag the `⠿` grip. The position is saved locally and stays after a refresh.
+
+**How do I hide it?**
+Press `Alt+Shift+V` or `Ctrl+Shift+H`, or click the hide button in the toolbar. The orb becomes transparent instead of ending voice.
+
+**Does hiding end the voice conversation or mute me?**
+No. The script only changes the orb's opacity; it never touches the voice session or the microphone.
+
+**How do I restore the default orb?**
+Disable or remove this script in Tampermonkey, then refresh the ChatGPT page. The orb returns to its original size and position.
+
+**Does it upload my data?**
+No. It makes no network requests and does not read the chat text or audio. Position and state are stored only in Tampermonkey's local storage.
+
+**It installed but nothing happens.**
+Confirm Tampermonkey is enabled and has site access for ChatGPT, then refresh the page and start voice mode. The script needs the floating orb to be present.
+
+**Can I use it in Chrome?**
+The implementation uses standard DOM and userscript APIs, but it has only been tested in Edge. Please verify it yourself in Chrome.
+
+### Limitations and privacy
+
+- **Tested only in Microsoft Edge** on the real ChatGPT voice page, covering shrink, drag, shortcut hiding, and toolbar auto-hide. Chrome has not been tested separately.
+- It works only on interfaces that contain the floating voice orb (`data-testid="avatar-overlay-voice-orb"`). If ChatGPT changes its DOM, the script may need an update.
+- If more than one candidate orb is found, the script deliberately does not move anything.
+- Behavior can differ with window size and ChatGPT version.
+- This is an unofficial project and is not affiliated with OpenAI.
+
+---
 
 ## 它做什么
 
@@ -65,8 +130,17 @@
 
 ## 常见问题
 
+**语音球挡住文字，怎么移动？**
+鼠标靠近球，出现小工具栏后，按住 `⠿` 拖动即可。位置会自动保存在本地，刷新后仍在该处。
+
+**怎么隐藏或重新显示语音球？**
+按 `Alt+Shift+V` 或 `Ctrl+Shift+H`，也可以点击工具栏上的“隐藏球 / 显示球”。隐藏只是让球体透明。
+
 **隐藏球会中断语音吗？**
 不会。隐藏不触碰语音会话或麦克风。
+
+**怎么恢复默认，让语音球回到原来的大小和位置？**
+在 Tampermonkey 中停用或删除本脚本，然后刷新 ChatGPT 页面。语音球会恢复网页原本的尺寸和位置，无需手动改回任何设置。
 
 **会上传我的数据吗？**
 不会。脚本无网络请求，也不读取聊天内容。
