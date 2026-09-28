@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT 简约语音球
 // @namespace    local.chatgpt.voice-helper
-// @version      2.5.8
+// @version      2.5.9
 // @description  简约语音球：缩小、右下角、空闲透明、拖动记忆、快捷键隐藏。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -17,7 +17,7 @@
   'use strict';
 
   const SCALE = 0.7;
-  const VERSION = '2.5.8';
+  const VERSION = '2.5.9';
   const IDLE_OPACITY = 0.25;
   const MARGIN = 24;
   const SELECTOR = '[data-testid="avatar-overlay-voice-orb"]';
@@ -31,7 +31,7 @@
 
   let nx = fraction(read('voice-v2-x', 1));
   let ny = fraction(read('voice-v2-y', 1));
-  let dockTimer=0, docked=false;
+  let dockTimer=0;
   let hidden = false, hovered = false, dragging = false;
   let target = null, original = new Map();
   let tx = 0, ty = 0, factorX = 1, factorY = 1, frame = 0;
@@ -55,9 +55,10 @@
     edge.setAttribute('aria-label',nx<.5?'语音球在左侧：悬停或点击展开 / Orb on left: hover or click to reveal':'语音球在右侧：悬停或点击展开 / Orb on right: hover or click to reveal');edge.title=edge.getAttribute('aria-label');
   }
   function revealDock(){if(!target||!hidden)return;clearTimeout(dockTimer);hidden=false;hovered=true;appearance();place();scheduleDock();}
-  function scheduleDock(delay=1100){clearTimeout(dockTimer);dockTimer=setTimeout(()=>{dockTimer=0;if(!target||dragging)return;if(hovered){scheduleDock();return;}dockOrb();},delay);}
+  function nearEdge(){if(!target?.isConnected)return false;const r=target.getBoundingClientRect();return r.width>0&&(r.left<=48||innerWidth-r.right<=48);}
+  function scheduleDock(delay=1100){clearTimeout(dockTimer);dockTimer=0;if(!nearEdge())return;dockTimer=setTimeout(()=>{dockTimer=0;if(!target||dragging||!nearEdge())return;if(hovered){scheduleDock();return;}dockOrb();},delay);}
   function dockOrb(){
-    if(!target||dragging)return;clearTimeout(dockTimer);docked=true;hidden=true;hovered=false;nx=nx<.5?0:1;save('voice-v2-x',nx);place();appearance();
+    if(!target||dragging)return;clearTimeout(dockTimer);hidden=true;hovered=false;nx=nx<.5?0:1;save('voice-v2-x',nx);place();appearance();
     statusDismissed=false;statusBadge.style.display='flex';setStatus(nx<.5?'已收纳到左侧细线，移到细线处展开。 / Hidden at the left edge. Hover over the line to reveal.':'已收纳到右侧细线，移到细线处展开。 / Hidden at the right edge. Hover over the line to reveal.');clearTimeout(statusTimer);statusTimer=setTimeout(()=>{statusBadge.style.display='none'},6500);
   }
   edge.addEventListener('pointerenter',revealDock);edge.addEventListener('click',revealDock);edge.addEventListener('focus',revealDock);
@@ -146,7 +147,7 @@
     own('left', '0px'); own('top', '0px'); own('right', 'auto'); own('bottom', 'auto');
     own('scale', String(SCALE)); own('z-index', '2147483600');
     for (const side of ['top', 'right', 'bottom', 'left']) own('margin-' + side, '0px');
-    calibrate(); appearance(); place();docked=true;scheduleDock(3000);
+    calibrate(); appearance(); place();scheduleDock(3000);
   }
   function scan() {
     if(document.hidden)return;
@@ -177,7 +178,7 @@
   function beginDrag(e) {
     if (e.button !== 0 || !e.isPrimary || !target || hidden || dragging) return;
     e.preventDefault();e.stopPropagation();grip.style.cursor='grabbing'; dragging = true; startX = e.clientX; startY = e.clientY; startNX = nx; startNY = ny;
-    clearTimeout(dockTimer);
+    clearTimeout(dockTimer);dockTimer=0;
     grip.setPointerCapture(e.pointerId); appearance();
   }
   grip.addEventListener('pointerdown', beginDrag);
@@ -189,7 +190,7 @@
   }
   grip.addEventListener('pointermove', moveDrag);
   grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
-  function endDrag() { if (!dragging) return; dragging = false;grip.style.cursor='grab';hovered=false; save('voice-v2-x', nx); save('voice-v2-y', ny); appearance();if(docked)scheduleDock(); }
+  function endDrag() { if (!dragging) return; dragging = false;grip.style.cursor='grab';hovered=false; save('voice-v2-x', nx); save('voice-v2-y', ny); appearance();scheduleDock(); }
   grip.addEventListener('pointerup', endDrag); grip.addEventListener('pointercancel', endDrag); grip.addEventListener('lostpointercapture', endDrag);
   function onPointerMove(e) {
     lastPointer={x:e.clientX,y:e.clientY};if(pointerFrame)return;
@@ -199,7 +200,7 @@
       const inside=(rect,pad)=>x>=rect.left-pad&&x<=rect.right+pad&&y>=rect.top-pad&&y<=rect.bottom+pad;
       const next=inside(r,0),near=inside(r,24);
       if(next!==hovered){hovered=next;appearance()}
-      if(near){clearTimeout(dockTimer);dockTimer=0;}else if(docked&&!dockTimer)scheduleDock();
+      if(near){clearTimeout(dockTimer);dockTimer=0;}else if(!dockTimer&&nearEdge())scheduleDock();
     });
   }
   function onKey(e) {
@@ -210,7 +211,7 @@
   }
   function onResize() {
     cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(() => { if (!target?.isConnected) return; calibrate(); place(); });
+    frame = requestAnimationFrame(() => { if (!target?.isConnected) return; calibrate(); place();if(!hidden)scheduleDock(); });
   }
   window.addEventListener('keydown', onKey, true);
   window.addEventListener('pointermove', onPointerMove, { passive: true });
