@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT 简约语音球
 // @namespace    local.chatgpt.voice-helper
-// @version      2.5.11
+// @version      2.5.12
 // @description  简约语音球：缩小、右下角、空闲透明、拖动记忆、快捷键隐藏。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -17,7 +17,7 @@
   'use strict';
 
   const SCALE = 0.7;
-  const VERSION = '2.5.11';
+  const VERSION = '2.5.12';
   const IDLE_OPACITY = 0.25;
   const MARGIN = 24;
   const SELECTOR = '[data-testid="avatar-overlay-voice-orb"]';
@@ -29,6 +29,9 @@
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const fraction = value => { const n = Number(value); return Number.isFinite(n) ? clamp(n, 0, 1) : 1; };
 
+  const storedScale=Number(read('voice-v2-scale',SCALE));
+  let scale=Number.isFinite(storedScale)?clamp(storedScale,0.4,1.5):SCALE;
+  let sizeTimer=0,resetMenu;
   let nx = fraction(read('voice-v2-x', 1));
   let ny = fraction(read('voice-v2-y', 1));
   let fullOpacity=read('voice-v2-full-opacity',false)===true;
@@ -43,11 +46,19 @@
   css.textContent = `[${MARK}], [${MARK}] * { pointer-events: none !important; }`;
   document.head.appendChild(css);
   const grip = document.createElement('div');
-  grip.title = '拖动移动 · 双击切换清晰度 / Drag to move · Double-click to toggle opacity';
+  grip.title = '拖动移动 · 双击清晰度 · 滚轮缩放 / Drag to move · Double-click opacity · Scroll to resize';
   grip.style.cssText = 'position:fixed;z-index:2147483601;display:none;border-radius:50%;clip-path:ellipse(50% 50% at 50% 50%);background:transparent;user-select:none;touch-action:none;cursor:grab;';
   document.body.appendChild(grip);
   grip.setAttribute('data-local-voice-grip', '');
   grip.style.cursor = 'grab'; grip.style.touchAction = 'none';
+  const sizeBadge=document.createElement('div');
+  sizeBadge.setAttribute('data-local-voice-size','');sizeBadge.setAttribute('role','status');
+  sizeBadge.style.cssText='position:fixed;z-index:2147483647;display:none;pointer-events:none;padding:4px 8px;border-radius:6px;background:#252525;color:#eee;font:12px/1.5 system-ui;';document.body.appendChild(sizeBadge);
+  function resizeOrb(){if(!target)return;own('scale',String(scale));calibrate();place();appearance();}
+  function showSize(){if(!target)return;const r=target.getBoundingClientRect();sizeBadge.textContent='大小 / Size '+Math.round(scale*100)+'%';sizeBadge.style.display='block';sizeBadge.style.left=clamp(r.left,6,Math.max(6,innerWidth-sizeBadge.offsetWidth-6))+'px';sizeBadge.style.top=clamp(r.top-sizeBadge.offsetHeight-8,6,Math.max(6,innerHeight-sizeBadge.offsetHeight-6))+'px';clearTimeout(sizeTimer);sizeTimer=setTimeout(()=>{sizeBadge.style.display='none'},1000);}
+  grip.addEventListener('wheel',e=>{if(!target||hidden||dragging||e.ctrlKey||!e.deltaY)return;e.preventDefault();e.stopPropagation();scale=clamp(Math.round((scale+(e.deltaY<0?0.05:-0.05))*100)/100,0.4,1.5);save('voice-v2-scale',scale);resizeOrb();showSize();},{passive:false});
+  function resetSizePosition(){scale=SCALE;nx=1;ny=1;hidden=false;hovered=false;dragging=false;clearTimeout(dockTimer);dockTimer=0;save('voice-v2-scale',scale);save('voice-v2-x',nx);save('voice-v2-y',ny);if(!target)scan();resizeOrb();showSize();scheduleDock(3000);}
+  try{resetMenu=GM_registerMenuCommand('重置大小与位置 / Reset size & position',resetSizePosition);}catch{}
   const edge=document.createElement('button');
   edge.type='button';edge.setAttribute('data-local-voice-edge','');
   edge.style.cssText='position:fixed;z-index:2147483647;display:none;width:12px;height:88px;padding:0;border:0;background:transparent;cursor:pointer;touch-action:none;';
@@ -90,7 +101,7 @@
   function showHintOnce(){
     if(hintSeen)return;
     hintSeen=true;save('voice-v2-gesture-hint-seen',true);hintActive=true;
-    statusText.textContent='双击小球切换完全清晰／空闲半透明；拖到左右边缘可收纳，悬停边缘细线展开。\nDouble-click the orb to toggle full opacity / idle fading. Drag to either edge to tuck away; hover over the edge line to reveal.';
+    statusText.textContent='滚轮缩放（40%～150%），菜单可重置大小与位置；双击小球切换完全清晰／空闲半透明；拖到左右边缘可收纳，悬停边缘细线展开。\nScroll over the orb to resize (40%–150%); reset size and position from the userscript menu. Double-click to toggle full opacity / idle fading. Drag to either edge to tuck away; hover over the edge line to reveal.';
     statusText.style.whiteSpace='pre-line';statusBadge.style.display='flex';
     clearTimeout(statusTimer);statusTimer=setTimeout(()=>{hintActive=false;statusBadge.style.display='none'},10000);
   }
@@ -155,7 +166,7 @@
     own('width', width); own('height', height); own('min-width', '0px'); own('min-height', '0px');
     own('max-width', 'none'); own('max-height', 'none'); own('position', 'fixed');
     own('left', '0px'); own('top', '0px'); own('right', 'auto'); own('bottom', 'auto');
-    own('scale', String(SCALE)); own('z-index', '2147483600');
+    own('scale', String(scale)); own('z-index', '2147483600');
     for (const side of ['top', 'right', 'bottom', 'left']) own('margin-' + side, '0px');
     calibrate(); appearance(); place();scheduleDock(3000);
   }
@@ -236,7 +247,8 @@
   document.addEventListener(STOP_EVENT, () => {
     clearInterval(timer); cancelAnimationFrame(frame);
     cancelAnimationFrame(pointerFrame);
-    clearTimeout(statusTimer);statusBadge.remove();
+    clearTimeout(statusTimer);statusBadge.remove();clearTimeout(sizeTimer);sizeBadge.remove();
+    try{if(resetMenu!==undefined)GM_unregisterMenuCommand(resetMenu);}catch{}
     document.removeEventListener('visibilitychange',resumeScan);
     try { if(statusMenu!==undefined)GM_unregisterMenuCommand(statusMenu); } catch {}
     window.removeEventListener('keydown', onKey, true); window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('resize', onResize);
